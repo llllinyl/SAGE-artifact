@@ -1,0 +1,2 @@
+add_executable(test_sova_batch test_sova_batch.cpp)
+target_link_libraries(test_sova_batch SOVA)
