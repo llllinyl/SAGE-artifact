@@ -327,7 +327,6 @@ int main(int argc, char **argv)
         }
     }
 
-    // SPIRIT-style post-run size estimate; do not replace the actual CRS query.
     std::vector<int> rotation_steps;
     for (size_t step = 1; step < params.lwe_dimension; step <<= 1)
     {
@@ -369,14 +368,11 @@ int main(int argc, char **argv)
         row_selector_bytes + galois_key_bytes + relin_key_bytes;
     size_t response_bytes = 0;
     size_t split_response_bytes = 0;
-    // int min_noise = std::numeric_limits<int>::max();
     const Modulus split_q1(split_q1_value);
     const Modulus split_q2(split_q2_value);
     for (const auto &page : response.pages)
     {
         response_bytes += bytes(page);
-        // min_noise = std::min(min_noise, decryptor.invariant_noise_budget(page));
-
         Ciphertext split_page = page;
         evaluator.split_mod_switch_inplace(split_page, split_q1, split_q2);
         const size_t degree = split_page.poly_modulus_degree();
@@ -396,7 +392,6 @@ int main(int argc, char **argv)
               << "response [full/split]: " << static_cast<double>(response_bytes) / 1024.0
               << " / " << static_cast<double>(split_response_bytes) / 1024.0
               << " KiB\n"
-            //   << "minimum response noise budget: " << min_noise << " bits\n"
               << "correctness: " << (correct ? "PASS" : "FAIL") << '\n';
 
     return correct ? 0 : 1;
