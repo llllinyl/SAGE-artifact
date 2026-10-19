@@ -30,11 +30,6 @@ namespace sova::pir
         constexpr uint64_t crs_domain_selector = 2;
         constexpr uint64_t crs_domain_galois = 3;
         constexpr uint64_t crs_domain_relinearization = 4;
-
-        // Number of RNS limbs that carry data in the accumulated pages. The response is
-        // modulus-switched to the next (smaller) context before it is returned, so the
-        // highest limb is never needed and stays zero all the way through. Keeping this
-        // explicit lets the inverse NTT skip the structurally zero limbs.
         constexpr size_t accumulated_limbs = 2;
 
         uint64_t splitmix64(uint64_t &state)
@@ -149,9 +144,6 @@ namespace sova::pir
         {
             public_params.params = params;
             pack_database_u8(database, params.rows, params.cols, server_state.packed_database);
-            // The unpacked 64-bit copy is only a fallback for layouts that cannot be byte
-            // packed (empty packed database). Keeping it unconditionally duplicated the whole
-            // server database at eight bytes per matrix entry for nothing.
             if (server_state.packed_database.empty())
             {
                 server_state.database = database;
@@ -886,8 +878,6 @@ namespace sova::pir
         const auto total_start = Clock::now();
 
         {
-            // Restore the previous counter on normal return or exception.
-            // The counter is active only during this SOVAQuery invocation.
             struct RestoreSeedCounter
             {
                 Nanoseconds *previous;
@@ -899,9 +889,6 @@ namespace sova::pir
             } restore_seed_counter{seal::sova_seed_elapsed};
 
             seal::sova_seed_elapsed = &seed_elapsed;
-
-            // Record a stage after subtracting its nested Seed time.
-            // This keeps Seed disjoint from the other four reported modules.
             auto measure = [&](double &destination_ms, auto &&operation)
             {
                 const auto seed_before = seed_elapsed;
@@ -921,9 +908,6 @@ namespace sova::pir
             client_state = {};
             client_state.batch_indices = batch_indices;
 
-            // ------------------------------------------------------------
-            // PBC: assign the requested indices to buckets.
-            // ------------------------------------------------------------
             measure(pbc_ms, [&]
             {
                 AssignBatchIndicesToBuckets(
@@ -932,9 +916,6 @@ namespace sova::pir
                     client_state.query_plan);
             });
 
-            // ------------------------------------------------------------
-            // SimplePIR: sample the LWE secret.
-            // ------------------------------------------------------------
             measure(simplepir_ms, [&]
             {
                 sample_ternary(
