@@ -1,3 +1,17 @@
+/*
+Derived from public_matrix.cpp in SPIRIT:
+"SPIRIT: Batch Hintless Single-server PIR via Stateful Ciphertext Conversion"
+
+Original work: ZHANG, Z. (2026).
+Source: https://doi.org/10.5281/zenodo.20528536
+
+The original code is licensed under the Creative Commons Attribution
+4.0 International License (CC BY 4.0):
+https://creativecommons.org/licenses/by/4.0/
+
+Modifications: Adapted for integration into SOVA.
+*/
+
 #include "public_matrix.h"
 
 #include <algorithm>
@@ -68,14 +82,6 @@ namespace sova::pir
             return;
         }
 
-        // Two-level blocking. The plain "column outer, row inner" order streams the whole
-        // hint matrix (rows * lwe_dimension * 4 bytes) once per column, which is by far the
-        // dominant cost of the whole setup. Blocking keeps the hint rows of one row block
-        // and a chunk of public matrix rows resident in cache instead.
-        //
-        // All arithmetic is modulo 2^32 and therefore associative and commutative, so the
-        // blocking does not change a single bit of the result; the public matrix PRNG is
-        // still consumed in increasing column order, so the sampled rows are unchanged.
         constexpr size_t cache_block_bytes = 128 * 1024;
         const size_t block_rows = std::max<size_t>(
             1, cache_block_bytes / (lwe_dimension * sizeof(uint32_t)));
@@ -110,9 +116,6 @@ namespace sova::pir
                         }
 
                         uint32_t *__restrict__ hint_row = hint_matrix.data() + row * lwe_dimension;
-                        // The product is reduced modulo 2^32 either way, so the 32-bit
-                        // multiply is bit-identical to the previous 64-bit one, but the
-                        // compiler can vectorize it.
                         for (size_t j = 0; j < lwe_dimension; j++)
                         {
                             hint_row[j] += db_value * public_row[j];
