@@ -1,3 +1,17 @@
+/*
+Derived from pbc.cpp in SPIRIT:
+"SPIRIT: Batch Hintless Single-server PIR via Stateful Ciphertext Conversion"
+
+Original work: ZHANG, Z. (2026).
+Source: https://doi.org/10.5281/zenodo.20528536
+
+The original code is licensed under the Creative Commons Attribution
+4.0 International License (CC BY 4.0):
+https://creativecommons.org/licenses/by/4.0/
+
+Modifications: Adapted for integration into SOVA.
+*/
+
 #include "pbc.h"
 
 #include <algorithm>
@@ -207,8 +221,6 @@ namespace sova::pir
         public_params.candidate_buckets.resize(params.num_entries);
         public_params.index_placements.resize(params.num_entries);
 
-        // First pass: candidate buckets and the resulting per-bucket item counts. The counts
-        // allow every bucket to be reserved exactly once instead of growing repeatedly.
         for (size_t global_index = 0; global_index < params.num_entries; global_index++)
         {
             auto candidates = candidate_buckets_for_index(
@@ -230,8 +242,6 @@ namespace sova::pir
             public_params.max_bucket_size = std::max(public_params.max_bucket_size, bucket_size);
         }
 
-        // Second pass: fill the bucket index lists. The traversal order is unchanged, so the
-        // slot indices stored in index_placements still match bucket_global_indices.
         for (size_t global_index = 0; global_index < params.num_entries; global_index++)
         {
             for (size_t bucket_index : public_params.candidate_buckets[global_index])
