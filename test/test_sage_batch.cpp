@@ -1,4 +1,4 @@
-#include "sova_batch_protocol.h"
+#include "sage_batch_protocol.h"
 
 #include "seal/seal.h"
 
@@ -17,7 +17,7 @@
 #include <bit>
 
 using namespace seal;
-using namespace sova::pir;
+using namespace sage::pir;
 
 namespace
 {
@@ -240,7 +240,7 @@ int main(int argc, char **argv)
         indices[i] = (i * num_entries) / batch_size;
     }
 
-    SOVAParams params;
+    SAGEParams params;
     params.pbc_params.num_entries = num_entries;
     params.pbc_params.batch_size = batch_size;
     params.pbc_params.num_hash_funcs = options.hash_functions;
@@ -252,17 +252,17 @@ int main(int argc, char **argv)
     params.record_size_bytes = record_size;
     params.bucket_depth = bucket_depth;
 
-    SOVAPublicParams public_params;
-    SOVAServerState server_state;
-    SOVAAnswerPrecompState answer_precomp;
-    SOVAQueryMessage query;
-    SOVAClientState client_state;
-    SOVAResponseMessage response;
-    SOVAQueryProfile query_profile;
-    SOVAAnswerProfile answer_profile;
+    SAGEPublicParams public_params;
+    SAGEServerState server_state;
+    SAGEAnswerPrecompState answer_precomp;
+    SAGEQueryMessage query;
+    SAGEClientState client_state;
+    SAGEResponseMessage response;
+    SAGEQueryProfile query_profile;
+    SAGEAnswerProfile answer_profile;
     std::vector<std::vector<uint8_t>> extracted;
 
-    std::cout << "SOVA batch PIR (single thread)\n"
+    std::cout << "SAGE batch PIR (single thread)\n"
               << "entries=" << num_entries << ", batch=" << batch_size
               << ", record=" << record_size << " B, database=" << std::fixed << std::setprecision(3)
               << static_cast<double>(num_entries * record_size) / (1024.0 * 1024.0) << " MiB\n"
@@ -271,26 +271,26 @@ int main(int argc, char **argv)
               << ", seed=" << options.seed << "\n\n";
 
     time_ms("database setup", [&] {
-        SOVADBSetup(database, params, context, public_params, server_state);
+        SAGEDBSetup(database, params, context, public_params, server_state);
     });
     time_ms("database/a-side precompute", [&] {
-        SOVAAnswerPrecompute(
+        SAGEAnswerPrecompute(
             public_params, server_state, context, batch_encoder, evaluator,
             answer_precomp);
     });
     time_ms("online query", [&] {
-        SOVAQuery(public_params, indices, context, batch_encoder, keygen, client_encryptor, query, client_state, &query_profile);
+        SAGEQuery(public_params, indices, context, batch_encoder, keygen, client_encryptor, query, client_state, &query_profile);
     });
     time_ms("online answer", [&] {
-        SOVAAnswer(
+        SAGEAnswer(
             public_params, server_state, answer_precomp, query, context,
             batch_encoder, public_encryptor, evaluator, response, &answer_profile);
     });
     time_ms("client extract", [&] {
-        SOVAExtract(public_params, client_state, response, batch_encoder, decryptor, extracted);
+        SAGEExtract(public_params, client_state, response, batch_encoder, decryptor, extracted);
     });
 
-    std::cout << "\nSOVAQuery breakdown:\n"  << std::fixed << std::setprecision(3)
+    std::cout << "\nSAGEQuery breakdown:\n"  << std::fixed << std::setprecision(3)
               << "  PBC:             "       << query_profile.pbc_ms << " ms\n"
               << "  Seed:            "       << query_profile.seed_ms << " ms\n"
               << "  SimplePIR:       "       << query_profile.simplepir_ms << " ms\n"
@@ -298,7 +298,7 @@ int main(int argc, char **argv)
               << "  Row selector:    "       << query_profile.row_selector_ms << " ms\n"
               << "  Evaluation keys: "       << query_profile.evaluation_keys_ms << " ms\n";
 
-    std::cout << "\nSOVAAnswer breakdowm:\n" << std::fixed << std::setprecision(3)
+    std::cout << "\nSAGEAnswer breakdowm:\n" << std::fixed << std::setprecision(3)
 	      << "  SimplePIR:        " << answer_profile.simplepir_ms << " ms\n"
               << "  LWEsToSIMD:       " << answer_profile.lwes_to_simd_online_b_ms + answer_profile.lwes_to_simd_finalize_ms << " ms\n"
               << "  Row selection:    " << answer_profile.encrypted_row_selection_ms + answer_profile.relinearization_ms << " ms\n"
