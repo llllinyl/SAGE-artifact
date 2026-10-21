@@ -1,4 +1,4 @@
-#include "sova_batch_protocol.h"
+#include "sage_batch_protocol.h"
 #include "seal/randomgen.h"
 #include "matmul.h"
 #include "public_matrix.h"
@@ -17,14 +17,14 @@
 #include <sstream>
 #include <stdexcept>
 
-namespace sova::pir
+namespace sage::pir
 {
     using namespace seal;
 
     namespace
     {
         constexpr uint64_t lwe_modulus = (1ULL << 32);
-        constexpr uint64_t sova_plain_modulus = 65537;
+        constexpr uint64_t sage_plain_modulus = 65537;
         constexpr size_t min_secure_lwe_dimension = 1024;
         constexpr uint64_t crs_domain_evaluation = 1;
         constexpr uint64_t crs_domain_selector = 2;
@@ -42,7 +42,7 @@ namespace sova::pir
 
         prng_seed_type derive_crs_seed(uint64_t master, uint64_t domain, uint64_t index)
         {
-	    seal::SOVASeedTimer seed_timer;
+	    seal::SAGESeedTimer seed_timer;
             uint64_t state = master ^ (domain * 0xd6e8feb86659fd93ULL) ^
                 (index * 0xa0761d6478bd642fULL);
             prng_seed_type seed{};
@@ -56,7 +56,7 @@ namespace sova::pir
             return seed;
         }
 
-        std::vector<uint32_t> sova_galois_elts(const SEALContext &context, size_t lwe_dimension)
+        std::vector<uint32_t> sage_galois_elts(const SEALContext &context, size_t lwe_dimension)
         {
             std::vector<uint32_t> result;
             auto tool = context.key_context_data()->galois_tool();
@@ -67,7 +67,7 @@ namespace sova::pir
             return result;
         }
 
-        std::vector<prng_seed_type> sova_key_seeds(
+        std::vector<prng_seed_type> sage_key_seeds(
             uint64_t master, uint64_t domain, size_t count)
         {
             std::vector<prng_seed_type> result(count);
@@ -91,7 +91,7 @@ namespace sova::pir
 
         void build_bucket_partitions(
             size_t bucket_count, size_t slot_count, size_t record_size,
-            std::vector<SOVABucketPartition> &partitions, size_t &total_pages)
+            std::vector<SAGEBucketPartition> &partitions, size_t &total_pages)
         {
             partitions.clear();
             total_pages = 0;
@@ -100,7 +100,7 @@ namespace sova::pir
             while (remaining)
             {
                 const size_t group_size = std::bit_floor(remaining);
-                SOVABucketPartition partition;
+                SAGEBucketPartition partition;
                 partition.bucket_begin = begin;
                 partition.bucket_count = group_size;
                 partition.slots_per_bucket = slot_count / group_size;
@@ -138,9 +138,9 @@ namespace sova::pir
 
         void simplepir_setup(
             const std::vector<uint64_t> &database,
-            const SOVASimplePIRParams &params,
-            SOVASimplePIRPublicParams &public_params,
-            SOVASimplePIRServerState &server_state)
+            const SAGESimplePIRParams &params,
+            SAGESimplePIRPublicParams &public_params,
+            SAGESimplePIRServerState &server_state)
         {
             public_params.params = params;
             pack_database_u8(database, params.rows, params.cols, server_state.packed_database);
@@ -166,7 +166,7 @@ namespace sova::pir
             }
         }
 
-        void validate_batch_params(const SOVAParams &params)
+        void validate_batch_params(const SAGEParams &params)
         {
             if (params.lwe_dimension == 0)
             {
@@ -207,7 +207,7 @@ namespace sova::pir
             }
         }
 
-        void validate_batch_public_params(const SOVAPublicParams &public_params)
+        void validate_batch_public_params(const SAGEPublicParams &public_params)
         {
             validate_batch_params(public_params.params);
             size_t num_buckets = public_params.pbc_public_params.num_buckets;
@@ -226,8 +226,8 @@ namespace sova::pir
         }
 
         void validate_batch_server_state(
-            const SOVAPublicParams &public_params,
-            const SOVAServerState &server_state)
+            const SAGEPublicParams &public_params,
+            const SAGEServerState &server_state)
         {
             size_t num_buckets = public_params.pbc_public_params.num_buckets;
             if (server_state.bucket_server_states.size() != num_buckets)
@@ -275,7 +275,7 @@ namespace sova::pir
         void pack_switched_hint(
             const std::vector<uint32_t> &source,
             uint64_t plain_modulus,
-            SOVAPackedHint &destination)
+            SAGEPackedHint &destination)
         {
             constexpr size_t bit_width = 17;
             destination.size = source.size();
@@ -359,10 +359,10 @@ namespace sova::pir
             response.assign(padded_response.begin(), padded_response.begin() + packed.rows);
         }
 
-        struct SOVAAnswerOnlineState
+        struct SAGEAnswerOnlineState
         {
             std::vector<Ciphertext> row_selectors;
-            std::vector<SOVAComponentBuffer> conversion_c0_pages;
+            std::vector<SAGEComponentBuffer> conversion_c0_pages;
             RelinKeys relin_keys;
         };
 
@@ -428,8 +428,8 @@ namespace sova::pir
             size_t data_limbs, const SEALContext &context, Ciphertext &destination);
 
         void LWEsToSIMDFinalize(
-            const SOVAAnswerPrecompState &offline_state,
-            const SOVAAnswerOnlineState &online_state,
+            const SAGEAnswerPrecompState &offline_state,
+            const SAGEAnswerOnlineState &online_state,
             size_t page_index,
             const Plaintext &simplepir_b,
             const SEALContext &context,
@@ -539,12 +539,12 @@ namespace sova::pir
         }
     }
 
-    void SOVADBSetup(
+    void SAGEDBSetup(
         const std::vector<std::vector<uint8_t>> &database,
-        const SOVAParams &params,
+        const SAGEParams &params,
         const SEALContext &context,
-        SOVAPublicParams &public_params,
-        SOVAServerState &server_state)
+        SAGEPublicParams &public_params,
+        SAGEServerState &server_state)
     {
         validate_batch_params(params);
         validate_context_limbs(context);
@@ -599,7 +599,7 @@ namespace sova::pir
             }
             public_params.bucket_layouts[bucket] = layout;
 
-            SOVASimplePIRParams single;
+            SAGESimplePIRParams single;
             single.rows = layout.rows;
             single.cols = layout.cols;
             single.lwe_dimension = params.lwe_dimension;
@@ -610,20 +610,20 @@ namespace sova::pir
                 server_state.bucket_server_states[bucket]);
             auto &single_state = server_state.bucket_server_states[bucket];
             pack_switched_hint(
-                single_state.hint_matrix, sova_plain_modulus,
+                single_state.hint_matrix, sage_plain_modulus,
                 server_state.switched_hint_matrices[bucket]);
             single_state.hint_matrix.clear();
             single_state.hint_matrix.shrink_to_fit();
         }
     }
 
-    void SOVAAnswerPrecompute(
-        const SOVAPublicParams &public_params,
-        SOVAServerState &server_state,
+    void SAGEAnswerPrecompute(
+        const SAGEPublicParams &public_params,
+        SAGEServerState &server_state,
         const SEALContext &context,
         BatchEncoder &batch_encoder,
         Evaluator &evaluator,
-        SOVAAnswerPrecompState &precomp_state)
+        SAGEAnswerPrecompState &precomp_state)
     {
         validate_batch_public_params(public_params);
         validate_batch_server_state(public_params, server_state);
@@ -632,7 +632,7 @@ namespace sova::pir
             public_params.pbc_public_params.num_buckets)
         {
             throw std::invalid_argument(
-                "packed hint matrices are not available; run SOVADBSetup again before "
+                "packed hint matrices are not available; run SAGEDBSetup again before "
                 "precomputing the answer phase");
         }
         const size_t N = context.first_context_data()->parms().poly_modulus_degree();
@@ -661,8 +661,8 @@ namespace sova::pir
         Ciphertext evaluation_a = expand_seeded_object(seeded_evaluation_a, context);
         zero_cipher_component(evaluation_a, 0);
 
-        const auto galois_elts = sova_galois_elts(context, n);
-        auto galois_seeds = sova_key_seeds(
+        const auto galois_elts = sage_galois_elts(context, n);
+        auto galois_seeds = sage_key_seeds(
             public_params.simd_crs_seed, crs_domain_galois,
             galois_elts.size() * limbs);
         GaloisKeys seeded_galois_a =
@@ -679,7 +679,7 @@ namespace sova::pir
         RelinKeys relin_a;
         if (d > 1)
         {
-            auto relin_seeds = sova_key_seeds(
+            auto relin_seeds = sage_key_seeds(
                 public_params.simd_crs_seed, crs_domain_relinearization, limbs);
             relin_a = expand_seeded_object(
                 crs_keygen.create_relin_keys_with_public_seeds(relin_seeds), context);
@@ -721,7 +721,7 @@ namespace sova::pir
         std::vector<uint64_t> diagonal(N, 0);
         AccumulationScratch accumulation_scratch;
         const auto &data_context = *context.first_context_data();
-        const SOVAPackedHint *switched_hints = server_state.switched_hint_matrices.data();
+        const SAGEPackedHint *switched_hints = server_state.switched_hint_matrices.data();
         for (const auto &partition : public_params.bucket_partitions)
         {
             const size_t G = partition.bucket_count;
@@ -842,21 +842,21 @@ namespace sova::pir
                 }
             }
         }
-        std::vector<SOVAPackedHint>().swap(server_state.switched_hint_matrices);
+        std::vector<SAGEPackedHint>().swap(server_state.switched_hint_matrices);
 
         precomp_state.initialized = true;
     }
 
-    void SOVAQuery(
-        const SOVAPublicParams &public_params,
+    void SAGEQuery(
+        const SAGEPublicParams &public_params,
         const std::vector<size_t> &batch_indices,
         const SEALContext &context,
         BatchEncoder &batch_encoder,
         KeyGenerator &keygen,
         Encryptor &encryptor,
-        SOVAQueryMessage &query,
-        SOVAClientState &client_state,
-        SOVAQueryProfile *profile)
+        SAGEQueryMessage &query,
+        SAGEClientState &client_state,
+        SAGEQueryProfile *profile)
     {
         using Clock = std::chrono::steady_clock;
         using Milliseconds = std::chrono::duration<double, std::milli>;
@@ -884,11 +884,11 @@ namespace sova::pir
 
                 ~RestoreSeedCounter()
                 {
-                    seal::sova_seed_elapsed = previous;
+                    seal::sage_seed_elapsed = previous;
                 }
-            } restore_seed_counter{seal::sova_seed_elapsed};
+            } restore_seed_counter{seal::sage_seed_elapsed};
 
-            seal::sova_seed_elapsed = &seed_elapsed;
+            seal::sage_seed_elapsed = &seed_elapsed;
             auto measure = [&](double &destination_ms, auto &&operation)
             {
                 const auto seed_before = seed_elapsed;
@@ -951,7 +951,7 @@ namespace sova::pir
 
                 prng_seed_type evaluation_seed{};
                 {
-                    seal::SOVASeedTimer seed_timer;
+                    seal::SAGESeedTimer seed_timer;
 
                     evaluation_seed = derive_crs_seed(
                         public_params.simd_crs_seed,
@@ -1059,7 +1059,7 @@ namespace sova::pir
 
                             prng_seed_type selector_seed{};
                             {
-                                seal::SOVASeedTimer seed_timer;
+                                seal::SAGESeedTimer seed_timer;
 
                                 selector_seed = derive_crs_seed(
                                     public_params.simd_crs_seed,
@@ -1079,7 +1079,7 @@ namespace sova::pir
 
             measure(evaluation_keys_ms, [&]
             {
-                const auto galois_elts = sova_galois_elts(context, n);
+                const auto galois_elts = sage_galois_elts(context, n);
 
                 const size_t limbs =
                     context.first_context_data()->parms()
@@ -1087,9 +1087,9 @@ namespace sova::pir
 
                 std::vector<prng_seed_type> galois_seeds;
                 {
-                    seal::SOVASeedTimer seed_timer;
+                    seal::SAGESeedTimer seed_timer;
 
-                    galois_seeds = sova_key_seeds(
+                    galois_seeds = sage_key_seeds(
                         public_params.simd_crs_seed,
                         crs_domain_galois,
                         galois_elts.size() * limbs);
@@ -1112,9 +1112,9 @@ namespace sova::pir
                 {
                     std::vector<prng_seed_type> relin_seeds;
                     {
-                        seal::SOVASeedTimer seed_timer;
+                        seal::SAGESeedTimer seed_timer;
 
-                        relin_seeds = sova_key_seeds(
+                        relin_seeds = sage_key_seeds(
                             public_params.simd_crs_seed,
                             crs_domain_relinearization,
                             limbs);
@@ -1152,12 +1152,12 @@ namespace sova::pir
     }
 
     static void lwes_to_simd_online_b(
-        const SOVAPublicParams &public_params,
-        const SOVAAnswerPrecompState &answer_precomp_state,
-        const SOVAQueryMessage &query,
+        const SAGEPublicParams &public_params,
+        const SAGEAnswerPrecompState &answer_precomp_state,
+        const SAGEQueryMessage &query,
         const SEALContext &context,
         Evaluator &evaluator,
-        SOVAAnswerOnlineState &online_state)
+        SAGEAnswerOnlineState &online_state)
     {
         const size_t N = context.first_context_data()->parms().poly_modulus_degree();
         const size_t n = public_params.params.lwe_dimension;
@@ -1231,25 +1231,25 @@ namespace sova::pir
         }
     }
 
-    void SOVAAnswer(
-        const SOVAPublicParams &public_params,
-        const SOVAServerState &server_state,
-        const SOVAAnswerPrecompState &answer_precomp_state,
-        const SOVAQueryMessage &query,
+    void SAGEAnswer(
+        const SAGEPublicParams &public_params,
+        const SAGEServerState &server_state,
+        const SAGEAnswerPrecompState &answer_precomp_state,
+        const SAGEQueryMessage &query,
         const SEALContext &context,
         BatchEncoder &batch_encoder,
         Encryptor &public_encryptor,
         Evaluator &evaluator,
-        SOVAResponseMessage &response,
-        SOVAAnswerProfile *profile)
+        SAGEResponseMessage &response,
+        SAGEAnswerProfile *profile)
     {
         validate_batch_public_params(public_params);
         validate_batch_server_state(public_params, server_state);
         validate_context_limbs(context);
         using clock = std::chrono::steady_clock;
-        SOVAAnswerProfile local_profile;
+        SAGEAnswerProfile local_profile;
         auto step_start = clock::now();
-        SOVAAnswerOnlineState online_state;
+        SAGEAnswerOnlineState online_state;
         lwes_to_simd_online_b(
             public_params, answer_precomp_state, query, context,
             evaluator, online_state);
@@ -1261,7 +1261,7 @@ namespace sova::pir
         const size_t U = public_params.num_pages;
         const size_t d = public_params.bucket_depth;
         const size_t kappa = public_params.params.record_size_bytes;
-        const uint64_t p = sova_plain_modulus;
+        const uint64_t p = sage_plain_modulus;
 
         std::vector<std::vector<uint32_t>> bucket_responses(B);
         step_start = clock::now();
@@ -1400,10 +1400,10 @@ namespace sova::pir
         }
     }
 
-    void SOVAExtract(
-        const SOVAPublicParams &public_params,
-        const SOVAClientState &client_state,
-        const SOVAResponseMessage &response,
+    void SAGEExtract(
+        const SAGEPublicParams &public_params,
+        const SAGEClientState &client_state,
+        const SAGEResponseMessage &response,
         BatchEncoder &batch_encoder,
         Decryptor &decryptor,
         std::vector<std::vector<uint8_t>> &records)
@@ -1424,7 +1424,7 @@ namespace sova::pir
             const size_t bucket = assignment.placement.bucket_index;
             const auto partition_it = std::find_if(
                 public_params.bucket_partitions.begin(), public_params.bucket_partitions.end(),
-                [bucket](const SOVABucketPartition &partition) {
+                [bucket](const SAGEBucketPartition &partition) {
                     return bucket >= partition.bucket_begin &&
                         bucket < partition.bucket_begin + partition.bucket_count;
                 });
@@ -1438,7 +1438,7 @@ namespace sova::pir
                 const size_t a = byte % J;
                 const uint64_t phase = decoded[u][a * G + local_bucket];
                 records[assignment.query_position][byte] = static_cast<uint8_t>(
-                    decode_lwe_slot(phase, sova_plain_modulus, public_params.params.record_plain_modulus));
+                    decode_lwe_slot(phase, sage_plain_modulus, public_params.params.record_plain_modulus));
             }
         }
     }
