@@ -18,7 +18,7 @@ Modifications: Adapted for integration into SOVA.
 #include <bit>
 #include <stdexcept>
 
-namespace sova::pir
+namespace sage::pir
 {
     using namespace seal;
 

@@ -5,7 +5,7 @@
 #include <limits>
 #include <vector>
 
-namespace sova::pir
+namespace sage::pir
 {
     inline constexpr size_t pbc_invalid_index = std::numeric_limits<size_t>::max();
 

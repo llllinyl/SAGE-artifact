@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace sova::pir
+namespace sage::pir
 {
     void sample_public_matrix_seed(seal::prng_seed_type &seed);
 

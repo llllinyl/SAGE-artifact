@@ -29,7 +29,7 @@ DWORD last_genrandom_error = 0;
 
 namespace seal
 {
-    thread_local std::chrono::nanoseconds *sova_seed_elapsed = nullptr;
+    thread_local std::chrono::nanoseconds *sage_seed_elapsed = nullptr;
     void random_bytes(seal_byte *buf, size_t count)
     {
 #if SEAL_SYSTEM == SEAL_SYSTEM_UNIX_LIKE
@@ -160,7 +160,7 @@ namespace seal
 
     shared_ptr<UniformRandomGenerator> UniformRandomGeneratorInfo::make_prng() const
     {
-	SOVASeedTimer seed_timer;
+	SAGESeedTimer seed_timer;
         switch (type_)
         {
         case prng_type::blake2xb:
@@ -177,7 +177,7 @@ namespace seal
 
     void UniformRandomGenerator::generate(size_t byte_count, seal_byte *destination)
     {
-	SOVASeedTimer seed_timer;
+	SAGESeedTimer seed_timer;
         lock_guard<mutex> lock(mutex_);
         while (byte_count)
         {

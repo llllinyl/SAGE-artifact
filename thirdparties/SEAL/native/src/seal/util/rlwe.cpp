@@ -103,7 +103,7 @@ namespace seal
         void sample_poly_uniform(
             shared_ptr<UniformRandomGenerator> prng, const EncryptionParameters &parms, uint64_t *destination)
         {
-            SOVASeedTimer seed_timer;
+            SAGESeedTimer seed_timer;
 	    // Extract encryption parameters
             auto coeff_modulus = parms.coeff_modulus();
             size_t coeff_modulus_size = coeff_modulus.size();

@@ -23,7 +23,7 @@ Modifications: Adapted for integration into SOVA.
 #include <unordered_set>
 #include <utility>
 
-namespace sova::pir
+namespace sage::pir
 {
     namespace
     {

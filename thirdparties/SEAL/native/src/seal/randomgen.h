@@ -20,34 +20,34 @@
 namespace seal
 {
         // Enabled only while SOVAQuery is collecting timings.
-    extern thread_local std::chrono::nanoseconds *sova_seed_elapsed;
+    extern thread_local std::chrono::nanoseconds *sage_seed_elapsed;
 
-    class SOVASeedTimer
+    class SAGESeedTimer
     {
     public:
-        SOVASeedTimer() : sink_(sova_seed_elapsed)
+        SAGESeedTimer() : sink_(sage_seed_elapsed)
         {
             if (sink_)
             {
                 // Nested PRNG calls must not be counted twice.
-                sova_seed_elapsed = nullptr;
+                sage_seed_elapsed = nullptr;
                 start_ = std::chrono::steady_clock::now();
             }
         }
 
-        ~SOVASeedTimer()
+        ~SAGESeedTimer()
         {
             if (sink_)
             {
                 *sink_ +=
                     std::chrono::duration_cast<std::chrono::nanoseconds>(
                         std::chrono::steady_clock::now() - start_);
-                sova_seed_elapsed = sink_;
+                sage_seed_elapsed = sink_;
             }
         }
 
-        SOVASeedTimer(const SOVASeedTimer &) = delete;
-        SOVASeedTimer &operator=(const SOVASeedTimer &) = delete;
+        SAGESeedTimer(const SAGESeedTimer &) = delete;
+        SAGESeedTimer &operator=(const SAGESeedTimer &) = delete;
 
     private:
         std::chrono::nanoseconds *sink_;
@@ -397,7 +397,7 @@ namespace seal
         */
         inline void refresh()
         {
-	    SOVASeedTimer seed_timer;
+	    SAGESeedTimer seed_timer;
             std::lock_guard<std::mutex> lock(mutex_);
             refill_buffer();
             buffer_head_ = buffer_begin_;
@@ -477,7 +477,7 @@ namespace seal
         */
         SEAL_NODISCARD auto create() -> std::shared_ptr<UniformRandomGenerator>
         {
-	    SOVASeedTimer seed_timer;
+	    SAGESeedTimer seed_timer;
             return use_random_seed_ ? create_impl([]() {
                 prng_seed_type seed;
                 random_bytes(reinterpret_cast<seal_byte *>(seed.data()), prng_seed_byte_count);
