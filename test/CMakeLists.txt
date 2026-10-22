@@ -1,2 +1,2 @@
-add_executable(test_sova_batch test_sova_batch.cpp)
-target_link_libraries(test_sova_batch SOVA)
+add_executable(test_sage_batch test_sage_batch.cpp)
+target_link_libraries(test_sage_batch SAGE)
